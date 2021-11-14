@@ -15,9 +15,9 @@ class DeepQModel(tf.keras.Model):
         self.model = Sequential()
 
         self.model.add(Input(shape=(shape_frame[0], shape_frame[1], num_frames)))
-        self.model.add(Conv2D(filters=32, kernel_size=(8, 8), strides=4, activation='relu'))
-        self.model.add(Conv2D(filters=64, kernel_size=(4, 4), strides=2, activation='relu'))
-        self.model.add(Conv2D(filters=64, kernel_size=(3, 3), strides=1, activation='relu'))
+        self.model.add(Conv2D(filters=32, kernel_size=(8, 8), strides=4, data_format="channels_last", activation='relu', kernel_initializer=tf.keras.initializers.VarianceScaling(scale=2)))
+        self.model.add(Conv2D(filters=64, kernel_size=(4, 4), strides=2, data_format="channels_last", activation='relu', kernel_initializer=tf.keras.initializers.VarianceScaling(scale=2)))
+        self.model.add(Conv2D(filters=64, kernel_size=(3, 3), strides=1, data_format="channels_last", activation='relu', kernel_initializer=tf.keras.initializers.VarianceScaling(scale=2)))
 
         self.model.add(Flatten())
 

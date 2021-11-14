@@ -2,11 +2,11 @@ from collections import deque
 import numpy as np
 
 class SampleBuffer():
-    def __init__(buffer_size=5000):
-        states = deque(maxlen = buffer_size)
-        actions = deque(maxlen = buffer_size)
-        rewards = deque(maxlen = buffer_size)
-        dones = deque(maxlen=buffer_size)
+    def __init__(self, buffer_size=5000):
+        self.states = deque(maxlen=buffer_size)
+        self.actions = deque(maxlen=buffer_size)
+        self.rewards = deque(maxlen=buffer_size)
+        self.dones = deque(maxlen=buffer_size)
 
     def add_experience(self, state, actions, reward, done):
         self.states.append(state)

@@ -28,11 +28,11 @@ class Agent():
         self.online_model = DeepQModel(self.num_frames, self.shape_frame, self.action_size)
 
         self.sample_buffer = SampleBuffer()
-        self.state_buffer = deque(maxlen = self.num_frames)
+        self.state_buffer = deque(maxlen=self.num_frames)
 
     def resize_observation(self, observation):
         grayscale = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-        resized = cv2.resize(grayscale, (84,84))
+        resized = cv2.resize(grayscale, (84, 84))
         return resized
 
     def policy(self, epsilon, state):
@@ -41,7 +41,9 @@ class Agent():
         else:
             # print("Q Value Action")
             # obtain the current best Q values from the DeepQ network
-            Q_values = self.online_model.model.predict(state[np.newaxis])
+            array = np.moveaxis(np.asarray(state), [0], [2])
+            array = array.reshape(-1, array.shape[0], array.shape[1], array.shape[2])
+            Q_values = self.online_model.model.predict(array)
             # take the action that results in the highest Q value
             return np.argmax(Q_values[0])
 
@@ -50,11 +52,27 @@ class Agent():
             if len(self.state_buffer) != 4:
                 action = self.env.action_space.sample()
             else:
-                action = self.policy(state, model, epsilon)
+                action = self.policy(0.5, self.state_buffer)
 
             observation, reward, done, info = self.env.step(action)
             resized = self.resize_observation(observation)
             self.state_buffer.append(resized)
 
+            if len(self.state_buffer) >= 4:
+                self.sample_buffer.add_experience(self.state_buffer, action, reward, done)
+
+    def learn(self):
+        states, actions, rewards, dones = self.sample_buffer.get_batch()
+        QValues = self.target_model.predict(states)
+        updated_QValues = QValues
+
+        for i in range(len(QValues)):
+            QValues[i][actions[i]] = 0.99 * QValues[i][actions[i]] + + rewards[i]
+
+        self.online_model.fit(states, updated_QValues)
+
+
 if __name__ == '__main__':
-    Agent("Pong-v0")
+    Agent = Agent("Pong-v0")
+    Agent.play_episode()
+
