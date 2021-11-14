@@ -1,5 +1,6 @@
 from collections import deque
 import numpy as np
+import itertools
 
 class SampleBuffer():
     def __init__(self, buffer_size=5000):
@@ -10,16 +11,22 @@ class SampleBuffer():
 
     def add_experience(self, state, actions, reward, done):
         self.states.append(state)
-        self.actions.append(state)
-        self.rewards.append(state)
-        self.dones.append(state)
+        self.actions.append(actions)
+        self.rewards.append(reward)
+        self.dones.append(done)
 
     def get_batch(self, batchsize = 50):
         index = np.random.randint(batchsize, len(self.states))
-        states = self.states[index-batchsize:index]
-        actions = self.actions[index - batchsize:index]
-        rewards = self.rewards[index - batchsize:index]
-        dones = self.dones[index - batchsize:index]
+        lower_limit = index-batchsize
+        #list(itertools.islice(q, 3, 7))
+        #states = self.states[index-batchsize:index]
+        states = list(itertools.islice(self.states, index-batchsize, index))
+        actions = list(itertools.islice(self.actions, index - batchsize, index))
+        rewards = list(itertools.islice(self.rewards, index - batchsize, index))
+        dones = list(itertools.islice(self.dones, index - batchsize, index))
+        #actions = self.actions[index - batchsize:index]
+        #rewards = self.rewards[index - batchsize:index]
+        #dones = self.dones[index - batchsize:index]
 
         return states, actions, rewards, dones
 

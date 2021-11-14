@@ -2,10 +2,11 @@
 import tensorflow as tf
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Flatten, Conv2D, Input
+from tensorflow.keras.optimizers import Adam
 
-class DeepQModel(tf.keras.Model):
+class DeepQModel():
     def __init__(self, num_frames, shape_frame, num_actions):
-        super(DeepQModel, self).__init__()
+        #super(DeepQModel, self).__init__()
 
         self.num_frames = num_frames
         self.shape_frame = shape_frame
@@ -23,6 +24,9 @@ class DeepQModel(tf.keras.Model):
 
         self.model.add(Dense(512, activation='relu'))
         self.model.add(Dense(num_actions, activation='linear'))
+
+        optimizer = Adam(1e-3)
+        self.model.compile(optimizer, loss=tf.keras.losses.Huber())
 
         self.model.summary()
 
