@@ -5,9 +5,12 @@ from SampleBuffer import SampleBuffer
 import numpy as np
 import cv2
 from collections import deque
+import matplotlib.pyplot as plt
+from matplotlib.pyplot import ion
+import datetime
 
 class Agent():
-    def __init__(self, Environment):
+    def __init__(self, Environment, Load_Weights=False, Weights_Path=""):
         self.env_name = Environment
         self.env = gym.make(self.env_name)
         self.env.reset()
@@ -15,6 +18,10 @@ class Agent():
         self.action_size = self.env.action_space.n
         self.shape_frame = [84, 84] #self.env.observation_space.shape
         self.num_frames = 4
+
+        self.epsilon = 0.9
+        self.epsilon_decrease = 0.1/100
+        self.epsilon_min = 0.05
 
         self.EPISODES = 20000
         self.episode_counter = 0
@@ -24,13 +31,24 @@ class Agent():
         self.episodes = []
         self.average = []
 
+        self.starttime = datetime.datetime.now()
+        self.starttime_episode = datetime.datetime.now()
+
         self.stepcounter = 1
 
+        self.Weights_Path = Weights_Path
         self.target_model = DeepQModel(self.num_frames, self.shape_frame, self.action_size)
         self.online_model = DeepQModel(self.num_frames, self.shape_frame, self.action_size)
 
+        if Load_Weights:
+            print("Load Recent Weights")
+            self.target_model.model.load_weights(self.Weights_Path)
+            self.online_model.model.load_weights(self.Weights_Path)
+
         self.sample_buffer = SampleBuffer()
         self.state_buffer = deque(maxlen=self.num_frames)
+
+        self.figurename = "Results" #plt.figure("Results")
 
     def resize_observation(self, observation):
         grayscale = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
@@ -51,11 +69,13 @@ class Agent():
 
     def play_episode(self):
         score = 0
+        self.starttime_episode = datetime.datetime.now().replace(microsecond=0)
+        self.env.reset()
         while(1):
             if len(self.state_buffer) != 4:
                 action = self.env.action_space.sample()
             else:
-                action = self.policy(0.5, self.state_buffer)
+                action = self.policy(self.epsilon, self.state_buffer)
 
             observation, reward, done, info = self.env.step(action)
             resized = self.resize_observation(observation)
@@ -68,16 +88,20 @@ class Agent():
 
 
             if self.sample_buffer.get_buffer_length() > 100:
-                print("Learn: " + str(self.stepcounter))
+                #print("Learn: " + str(self.stepcounter))
                 self.stepcounter += 1
                 self.learn()
 
-            if (self.stepcounter % 1000) == 0:
-                print("Update Target Model")
+            if (self.stepcounter % 5000) == 0:
+                print("Update Target Model and saved current weights!")
                 self.target_model.model.set_weights(self.online_model.model.get_weights())
+                self.online_model.model.save_weights(self.Weights_Path)
 
             score += reward
             if done:
+                self.epsilon = self.epsilon - self.epsilon_decrease
+                if self.epsilon < self.epsilon_min:
+                    self.epsilon = self.epsilon_min
                 self.scores.append(score)
                 break
 
@@ -89,10 +113,34 @@ class Agent():
         for i in range(len(QValues)):
             updated_QValues[i][actions[i]] = 0.99 * QValues[i][actions[i]] + rewards[i]
 
-        self.online_model.model.fit(np.array(states), updated_QValues)
+        self.online_model.model.fit(x=np.array(states),
+                                    y=updated_QValues,
+                                    verbose=0)
 
+    def play(self):
+        for i in range(1000):
+            self.play_episode()
+            time_used = datetime.datetime.now().replace(microsecond=0) - self.starttime_episode
+            print(str(datetime.datetime.now().replace(microsecond=0)) +
+                  "  Finished Episode: " +
+                  str(i) +
+                  " in " +
+                  str(time_used) +
+                  " Score: " +
+                  str(self.scores[-1]) +
+                  " Epsilon: " +
+                  str(self.epsilon))
+            self.episodes.append(i)
+            plt.figure(self.figurename)
+            plt.plot(self.episodes, self.scores)
+            plt.savefig('Current_Performance.png')
+            if (i % 100) == 0 and i != 0:
+                plt.figure()
+                plt.plot(self.episodes,self.scores)
 
 if __name__ == '__main__':
-    Agent = Agent("Pong-v0")
-    Agent.play_episode()
+    Agent = Agent(Environment="Pong-v0",
+                  Load_Weights=True,
+                  Weights_Path="recent_weights.hdf5")
+    Agent.play()
 

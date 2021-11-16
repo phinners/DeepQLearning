@@ -6,7 +6,6 @@ from tensorflow.keras.optimizers import Adam
 
 class DeepQModel():
     def __init__(self, num_frames, shape_frame, num_actions):
-        #super(DeepQModel, self).__init__()
 
         self.num_frames = num_frames
         self.shape_frame = shape_frame
