@@ -9,7 +9,6 @@ class DeepQModel():
 
         self.num_frames = num_frames
         self.shape_frame = shape_frame
-        print(self.shape_frame[0])
         self.num_actions = num_actions
 
         self.model = Sequential()
