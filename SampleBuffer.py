@@ -3,7 +3,7 @@ import numpy as np
 import itertools
 
 class SampleBuffer():
-    def __init__(self, buffer_size=5000):
+    def __init__(self, buffer_size=15000):
         """
         Initializing a SampleBuffer for expierence Replay
         :param buffer_size: Determines the Buffer size which is choosen

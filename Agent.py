@@ -29,8 +29,10 @@ class Agent():
         self.num_frames = 4                         # Number of Stacked Frames for Input to Neural Network
 
         self.epsilon = 0.9                          # Propability of random action choice in epsilon greedy
-        self.epsilon_decrease = 0.05/100            # Decrease of Epsilon per Episode
+        self.epsilon_decrease = 0.005/100            # Decrease of Epsilon per Episode
         self.epsilon_min = 0.05                     # Lower Bound of Epsilon Value
+
+        self.gamma = 0.9
 
         self.EPISODES = 20000                       # Number of Episodes to play
         self.episode_counter = 0                    # Counter of Episodes
@@ -83,9 +85,12 @@ class Agent():
         :param observation: Return of the environment after taking an action
         :return: Gives the resized observation back
         """
-        grayscale = cv2.cvtColor(observation, cv2.COLOR_RGB2GRAY)
-        resized = cv2.resize(grayscale, (84, 84))
-        return resized
+        resized = cv2.resize(observation, (84, 84))
+        grayscale = cv2.cvtColor(resized, cv2.COLOR_RGB2GRAY)
+        binary = cv2.threshold(grayscale, 140, 255, cv2.THRESH_BINARY)[1]
+
+        #resized = cv2.resize(grayscale, (84, 84))
+        return binary
 
     def policy(self, epsilon, state):
         """
@@ -117,6 +122,7 @@ class Agent():
         self.starttime_episode = datetime.datetime.now().replace(microsecond=0)
         # Reset environment to begin the episode at a random position
         self.env.reset()
+        self.make_initial_steps(22)
         while(1):
             if len(self.state_buffer) != 4:
                 action = self.env.action_space.sample()
@@ -132,6 +138,10 @@ class Agent():
             self.reward_buffer.append(reward)
             self.stepcounter += 1
             score += reward
+
+            #plt.figure()
+            #plt.imshow(resized)
+            #plt.show()
 
             # Add Values to the Sample Buffer
             if len(self.state_buffer) >= 5:
@@ -157,7 +167,11 @@ class Agent():
                 if self.epsilon < self.epsilon_min:
                     self.epsilon = self.epsilon_min
                 self.scores.append(score)
+                #self.learn()
                 break
+
+            if reward != 0.0:
+                self.make_initial_steps(22)
 
     def learn(self):
         """
@@ -178,7 +192,7 @@ class Agent():
             next_reward = next_rewards[i]
             # Determine Action to take of state(t+1), highest QValue of online Model at State (t+1)
             action = np.where(QValues[i] == np.amax(QValues[i]))[0][0]
-            updated_QValues[i][action] = 0.99 * next_QValues[i][action] + next_reward
+            updated_QValues[i][action] = (self.gamma * next_QValues[i][action]) + next_reward
             #print("Old QValue: " + str(QValues[i][action]) + " QValue: " + str(updated_QValues[i][action]) + " Reward: " + str(next_reward) + " Action: " + str(action))
             pass
 
@@ -225,6 +239,12 @@ class Agent():
         print(str(datetime.datetime.now().replace(microsecond=0)) + "Update Target Model and saved current weights!")
         self.target_model.set_weights(self.online_model.get_weights())
         self.online_model.save_weights(self.Weights_Path)
+
+    def make_initial_steps(self, number = 20):
+        for i in range(number):
+            action = self.env.action_space.sample()
+            self.env.step(action)
+            #print("Make Initial Steps: " + str(i))
 
 if __name__ == '__main__':
     Agent = Agent(Environment="Pong-v0",
